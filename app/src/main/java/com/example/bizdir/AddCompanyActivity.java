@@ -82,21 +82,22 @@ public class AddCompanyActivity extends AppCompatActivity {
         company.setWebsite(editWebsite.getText().toString().trim());
         company.setCategory(String.join(",", categories));
 
-        ApiClient.getCompanyService().addCompany(company).enqueue(new Callback<ApiResponse>() {
+        ApiClient.getCompanyService().addCompany(company).enqueue(new Callback<List<Company>>() {
             @Override
-            public void onResponse(Call<ApiResponse> call, Response<ApiResponse> response) {
-                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+            public void onResponse(Call<List<Company>> call, Response<List<Company>> response) {
+                if (response.isSuccessful()) {
                     Toast.makeText(AddCompanyActivity.this,
                             "Company saved successfully!", Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
                     Toast.makeText(AddCompanyActivity.this,
-                            "Failed to save company", Toast.LENGTH_SHORT).show();
+                            "Failed to save company (HTTP " + response.code() + ")",
+                            Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
-            public void onFailure(Call<ApiResponse> call, Throwable t) {
+            public void onFailure(Call<List<Company>> call, Throwable t) {
                 Toast.makeText(AddCompanyActivity.this,
                         "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }

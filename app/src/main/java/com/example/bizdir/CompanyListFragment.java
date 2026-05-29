@@ -6,19 +6,22 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+
 public class CompanyListFragment extends Fragment {
 
-
-
     private static final String ARG_CATEGORY = "category";
+
     private String category;
     private ListView listView;
     private CompanyAdapter adapter;
@@ -55,24 +58,29 @@ public class CompanyListFragment extends Fragment {
     }
 
     public void loadCompanies() {
-        CompanyService service = ApiClient.getCompanyService();
-        Call<ApiResponse> call = service.getCompanies(category, null);
+        ApiClient.getCompanyService()
+                .getCompanies("*", ApiClient.categoryFilter(category), "name.asc")
+                .enqueue(new Callback<List<Company>>() {
+                    @Override
+                    public void onResponse(Call<List<Company>> call, Response<List<Company>> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            adapter.updateList(response.body());
+                        } else if (getContext() != null) {
+                            Toast.makeText(getContext(),
+                                    "Server returned " + response.code(),
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    }
 
-        call.enqueue(new Callback<ApiResponse>() {
-            @Override
-            public void onResponse(Call<ApiResponse> call, Response<ApiResponse> response) {
-                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
-                    companyList.clear();
-                    companyList.addAll(response.body().getData());
-                    adapter.updateList(companyList);
-                }
-            }
-
-            @Override
-            public void onFailure(Call<ApiResponse> call, Throwable t) {
-                Toast.makeText(getContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
+                    @Override
+                    public void onFailure(Call<List<Company>> call, Throwable t) {
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(),
+                                    "Error: " + t.getMessage(),
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
     }
 
     public void filter(String query) {

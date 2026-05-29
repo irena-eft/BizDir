@@ -127,22 +127,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadCompaniesForProximity() {
-        ApiClient.getCompanyService().getCompanies(null, null).enqueue(new Callback<ApiResponse>() {
-            @Override
-            public void onResponse(Call<ApiResponse> call, Response<ApiResponse> response) {
-                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
-                    companiesForProximity.clear();
-                    if (response.body().getData() != null) {
-                        companiesForProximity.addAll(response.body().getData());
+        ApiClient.getCompanyService()
+                .getCompanies("*", null, "name.asc")
+                .enqueue(new Callback<List<Company>>() {
+                    @Override
+                    public void onResponse(Call<List<Company>> call, Response<List<Company>> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            companiesForProximity.clear();
+                            companiesForProximity.addAll(response.body());
+                        }
                     }
-                }
-            }
 
-            @Override
-            public void onFailure(Call<ApiResponse> call, Throwable t) {
-                // Proximity alerts are optional; list tabs show their own errors.
-            }
-        });
+                    @Override
+                    public void onFailure(Call<List<Company>> call, Throwable t) {
+                        // Proximity alerts are optional; tabs show their own errors.
+                    }
+                });
     }
 
     private void checkLocationPermission() {

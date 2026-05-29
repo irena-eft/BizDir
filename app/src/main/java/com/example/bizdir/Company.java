@@ -1,7 +1,11 @@
 package com.example.bizdir;
 
 public class Company {
-    private int id;
+
+    // Boxed Integer so that when we create a new Company on the phone the id
+    // stays null and Gson omits it from the JSON. Supabase then assigns the
+    // real id from its sequence.
+    private Integer id;
     private String name;
     private String address;
     private double latitude;
@@ -12,11 +16,9 @@ public class Company {
     private String category;
     private String icon_url;
 
-    // Constructor
     public Company() {}
 
-    // Getters and Setters
-    public int getId() { return id; }
+    public int getId() { return id == null ? 0 : id; }
     public void setId(int id) { this.id = id; }
 
     public String getName() { return name; }
