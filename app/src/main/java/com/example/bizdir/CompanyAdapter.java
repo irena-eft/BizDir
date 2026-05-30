@@ -9,14 +9,16 @@ import android.widget.Filter;
 import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.bumptech.glide.Glide;
+
 import java.util.ArrayList;
 import java.util.List;
+
 public class CompanyAdapter extends BaseAdapter implements Filterable {
 
-
-
-    private Context context;
-    private List<Company> companyList;
+    private final Context context;
+    private final List<Company> companyList;
     private List<Company> companyListFull;
 
     public CompanyAdapter(Context context, List<Company> companyList) {
@@ -58,22 +60,39 @@ public class CompanyAdapter extends BaseAdapter implements Filterable {
         holder.phone.setText(company.getTelephone());
         holder.website.setText(company.getWebsite());
 
-        // Постави икона според категорија
-        int iconRes = getIconForCategory(company.getCategory());
-        holder.icon.setImageResource(iconRes);
+        loadCompanyIcon(holder.icon, company);
 
         return convertView;
     }
 
-    private int getIconForCategory(String category) {
-        if (category == null) return R.drawable.ic_default;
-        switch (category.toLowerCase()) {
-            case "services": return R.drawable.ic_services;
-            case "fun": return R.drawable.ic_fun;
-            case "industry": return R.drawable.ic_industry;
-            case "education": return R.drawable.ic_education;
-            default: return R.drawable.ic_default;
+    /**
+     * If the company has a real image URL stored, load it with Glide.
+     * Otherwise fall back to one of our built-in category icons.
+     */
+    static void loadCompanyIcon(ImageView target, Company company) {
+        String url = company.getIconUrl();
+        int fallback = iconForCategory(company.getCategory());
+
+        if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
+            Glide.with(target.getContext())
+                    .load(url)
+                    .placeholder(fallback)
+                    .error(fallback)
+                    .into(target);
+        } else {
+            Glide.with(target.getContext()).clear(target);
+            target.setImageResource(fallback);
         }
+    }
+
+    private static int iconForCategory(String category) {
+        if (category == null) return R.drawable.ic_default;
+        String lower = category.toLowerCase();
+        if (lower.contains("services")) return R.drawable.ic_services;
+        if (lower.contains("fun")) return R.drawable.ic_fun;
+        if (lower.contains("industry")) return R.drawable.ic_industry;
+        if (lower.contains("education")) return R.drawable.ic_education;
+        return R.drawable.ic_default;
     }
 
     @Override
@@ -81,7 +100,7 @@ public class CompanyAdapter extends BaseAdapter implements Filterable {
         return companyFilter;
     }
 
-    private Filter companyFilter = new Filter() {
+    private final Filter companyFilter = new Filter() {
         @Override
         protected FilterResults performFiltering(CharSequence constraint) {
             List<Company> filteredList = new ArrayList<>();

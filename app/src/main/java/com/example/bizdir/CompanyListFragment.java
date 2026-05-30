@@ -1,5 +1,6 @@
 package com.example.bizdir;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -52,6 +53,13 @@ public class CompanyListFragment extends Fragment {
         companyList = new ArrayList<>();
         adapter = new CompanyAdapter(requireContext(), companyList);
         listView.setAdapter(adapter);
+
+        listView.setOnItemClickListener((parent, itemView, position, id) -> {
+            Company company = (Company) adapter.getItem(position);
+            Intent intent = new Intent(requireContext(), CompanyDetailActivity.class);
+            intent.putExtra(CompanyDetailActivity.EXTRA_COMPANY, company);
+            startActivity(intent);
+        });
 
         loadCompanies();
         return view;

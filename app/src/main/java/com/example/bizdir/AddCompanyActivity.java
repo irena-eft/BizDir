@@ -1,13 +1,32 @@
 package com.example.bizdir;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import com.bumptech.glide.Glide;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+import com.google.android.gms.tasks.CancellationTokenSource;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,10 +36,27 @@ import retrofit2.Response;
 
 public class AddCompanyActivity extends AppCompatActivity {
 
+    private static final int LOCATION_PERMISSION_REQUEST = 2001;
+
     private EditText editName, editAddress, editLatitude, editLongitude,
             editEmail, editTelephone, editWebsite;
     private CheckBox checkIndustry, checkFun, checkEducation, checkServices;
-    private Button btnSave;
+    private Button btnSave, btnPickImage, btnUseMyLocation;
+    private ImageView imagePreview;
+
+    private FusedLocationProviderClient fusedLocationClient;
+    private byte[] selectedImageBytes;
+    private String selectedImageMime;
+
+    // Modern Android photo picker - no runtime permission needed.
+    private final ActivityResultLauncher<PickVisualMediaRequest> photoPicker =
+            registerForActivityResult(
+                    new ActivityResultContracts.PickVisualMedia(),
+                    uri -> {
+                        if (uri != null) {
+                            loadPickedImage(uri);
+                        }
+                    });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,7 +77,89 @@ public class AddCompanyActivity extends AppCompatActivity {
         checkServices = findViewById(R.id.checkServices);
 
         btnSave = findViewById(R.id.btnSave);
+        btnPickImage = findViewById(R.id.btnPickImage);
+        btnUseMyLocation = findViewById(R.id.btnUseMyLocation);
+        imagePreview = findViewById(R.id.imagePreview);
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
         btnSave.setOnClickListener(v -> saveCompany());
+
+        btnPickImage.setOnClickListener(v -> photoPicker.launch(
+                new PickVisualMediaRequest.Builder()
+                        .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
+                        .build()));
+
+        btnUseMyLocation.setOnClickListener(v -> fetchCurrentLocation());
+    }
+
+    private void loadPickedImage(Uri uri) {
+        try (InputStream in = getContentResolver().openInputStream(uri)) {
+            if (in == null) {
+                Toast.makeText(this, "Could not read image", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[4096];
+            int len;
+            while ((len = in.read(buffer)) > 0) {
+                out.write(buffer, 0, len);
+            }
+            selectedImageBytes = out.toByteArray();
+            selectedImageMime = getContentResolver().getType(uri);
+            if (selectedImageMime == null) selectedImageMime = "image/jpeg";
+
+            Glide.with(this).load(uri).into(imagePreview);
+        } catch (IOException e) {
+            Toast.makeText(this, "Could not read image: " + e.getMessage(),
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void fetchCurrentLocation() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    LOCATION_PERMISSION_REQUEST);
+            return;
+        }
+
+        btnUseMyLocation.setEnabled(false);
+        btnUseMyLocation.setText("Locating...");
+
+        fusedLocationClient.getCurrentLocation(
+                        Priority.PRIORITY_HIGH_ACCURACY,
+                        new CancellationTokenSource().getToken())
+                .addOnSuccessListener(location -> {
+                    btnUseMyLocation.setEnabled(true);
+                    btnUseMyLocation.setText("Use my current location");
+                    if (location != null) {
+                        editLatitude.setText(String.valueOf(location.getLatitude()));
+                        editLongitude.setText(String.valueOf(location.getLongitude()));
+                    } else {
+                        Toast.makeText(this,
+                                "Could not get location. Try going outside or check GPS.",
+                                Toast.LENGTH_LONG).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    btnUseMyLocation.setEnabled(true);
+                    btnUseMyLocation.setText("Use my current location");
+                    Toast.makeText(this, "Location error: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST
+                && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            fetchCurrentLocation();
+        }
     }
 
     private void saveCompany() {
@@ -82,6 +200,34 @@ public class AddCompanyActivity extends AppCompatActivity {
         company.setWebsite(editWebsite.getText().toString().trim());
         company.setCategory(String.join(",", categories));
 
+        if (selectedImageBytes != null) {
+            btnSave.setEnabled(false);
+            btnSave.setText("Uploading image...");
+            ApiClient.uploadImage(selectedImageBytes, selectedImageMime,
+                    new ApiClient.UploadCallback() {
+                        @Override
+                        public void onSuccess(String publicUrl) {
+                            company.setIconUrl(publicUrl);
+                            sendCompanyToServer(company);
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            btnSave.setEnabled(true);
+                            btnSave.setText("SAVE");
+                            Toast.makeText(AddCompanyActivity.this,
+                                    "Image upload failed: " + message,
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
+        } else {
+            sendCompanyToServer(company);
+        }
+    }
+
+    private void sendCompanyToServer(Company company) {
+        btnSave.setEnabled(false);
+        btnSave.setText("Saving...");
         ApiClient.getCompanyService().addCompany(company).enqueue(new Callback<List<Company>>() {
             @Override
             public void onResponse(Call<List<Company>> call, Response<List<Company>> response) {
@@ -90,6 +236,8 @@ public class AddCompanyActivity extends AppCompatActivity {
                             "Company saved successfully!", Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
+                    btnSave.setEnabled(true);
+                    btnSave.setText("SAVE");
                     Toast.makeText(AddCompanyActivity.this,
                             "Failed to save company (HTTP " + response.code() + ")",
                             Toast.LENGTH_SHORT).show();
@@ -98,6 +246,8 @@ public class AddCompanyActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<List<Company>> call, Throwable t) {
+                btnSave.setEnabled(true);
+                btnSave.setText("SAVE");
                 Toast.makeText(AddCompanyActivity.this,
                         "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }

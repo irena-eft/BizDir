@@ -14,8 +14,9 @@ there is no local server to run.
    wait ~2 minutes for it to provision.
 3. In the left sidebar open **SQL Editor**, paste the contents of
    [`supabase_setup.sql`](supabase_setup.sql), and click **Run**.
-   That creates the `companies` table, three sample rows, and two
-   "allow anyone" Row Level Security policies.
+   That creates the `companies` table, three sample rows, the `logos`
+   Storage bucket for company images, and the Row Level Security
+   policies that let the app read and write.
 4. Open **Project Settings -> API** and copy two values:
    - **Project URL** (e.g. `https://abcdefg.supabase.co`)
    - **anon public** key (a long string starting with `eyJ...`)
@@ -63,3 +64,8 @@ icon in the toolbar to open the Add Company screen.
 - **No proximity toast appears**: your test coordinates need to be within
   50 m of where the emulator/phone "is". In the emulator's extended
   controls you can set a fake GPS location.
+- **Image upload fails with 403 or 400**: the `logos` Storage bucket or
+  its policies are missing - re-run `supabase_setup.sql`.
+- **"Use my current location" returns nothing on the emulator**: open
+  the emulator's three-dots menu -> Location -> set a position -> Set
+  Location, then tap the button again.

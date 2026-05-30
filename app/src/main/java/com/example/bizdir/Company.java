@@ -1,6 +1,8 @@
 package com.example.bizdir;
 
-public class Company {
+import java.io.Serializable;
+
+public class Company implements Serializable {
 
     // Boxed Integer so that when we create a new Company on the phone the id
     // stays null and Gson omits it from the JSON. Supabase then assigns the
