@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/detailToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        app:titleTextColor="@android:color/white"
+        app:navigationIconTint="@android:color/white" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <ImageView
+                android:id="@+id/detailIcon"
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="16dp"
+                android:contentDescription="@string/app_name" />
+
+            <TextView
+                android:id="@+id/detailName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary" />
+
+            <TextView
+                android:id="@+id/detailCategory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:textSize="14sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="24dp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="?android:attr/dividerHorizontal"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/detailAddress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_location_pin"
+                android:drawablePadding="16dp"
+                android:padding="12dp"
+                android:textSize="16sp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical" />
+
+            <TextView
+                android:id="@+id/detailPhone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_phone"
+                android:drawablePadding="16dp"
+                android:padding="12dp"
+                android:textSize="16sp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical" />
+
+            <TextView
+                android:id="@+id/detailEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_email"
+                android:drawablePadding="16dp"
+                android:padding="12dp"
+                android:textSize="16sp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical" />
+
+            <TextView
+                android:id="@+id/detailWebsite"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_website"
+                android:drawablePadding="16dp"
+                android:padding="12dp"
+                android:textSize="16sp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical" />
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
