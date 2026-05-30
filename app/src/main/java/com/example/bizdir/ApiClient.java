@@ -3,6 +3,8 @@ package com.example.bizdir;
 import android.os.Handler;
 import android.os.Looper;
 
+import org.json.JSONObject;
+
 import java.io.IOException;
 
 import okhttp3.Call;
@@ -16,30 +18,18 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
 
-    // Paste your values from the Supabase dashboard:
-    //   Project Settings -> API -> Project URL  (e.g. https://abcdefg.supabase.co)
-    //   Project Settings -> API -> anon public  (a long string starting with eyJ...)
-    private static final String SUPABASE_URL = "https://cflvicujcrvpzjdfwgug.supabase.co";
-    private static final String SUPABASE_ANON_KEY = "sb_publishable_ELxmVz4cuitPzTZ1u9fbGQ_iW_bfkjn";
-
-    // Name of the Supabase Storage bucket where company logos are saved.
-    // Created by the SQL in supabase_setup.sql.
-    private static final String LOGO_BUCKET = "logos";
+    // Where your PHP web services live. Change this to:
+    //   http://10.0.2.2/business_directory/        for the Android emulator
+    //   http://192.168.x.x/business_directory/     for a real phone on Wi-Fi
+    // The trailing slash is required.
+    private static final String BASE_URL = "http://10.0.2.2/business_directory/";
 
     private static Retrofit retrofit = null;
     private static OkHttpClient httpClient = null;
 
     private static OkHttpClient getHttpClient() {
         if (httpClient == null) {
-            httpClient = new OkHttpClient.Builder()
-                    .addInterceptor(chain -> {
-                        Request request = chain.request().newBuilder()
-                                .header("apikey", SUPABASE_ANON_KEY)
-                                .header("Authorization", "Bearer " + SUPABASE_ANON_KEY)
-                                .build();
-                        return chain.proceed(request);
-                    })
-                    .build();
+            httpClient = new OkHttpClient.Builder().build();
         }
         return httpClient;
     }
@@ -47,7 +37,7 @@ public class ApiClient {
     public static Retrofit getClient() {
         if (retrofit == null) {
             retrofit = new Retrofit.Builder()
-                    .baseUrl(SUPABASE_URL + "/rest/v1/")
+                    .baseUrl(BASE_URL)
                     .client(getHttpClient())
                     .addConverterFactory(GsonConverterFactory.create())
                     .build();
@@ -59,40 +49,22 @@ public class ApiClient {
         return getClient().create(CompanyService.class);
     }
 
-    /**
-     * Builds a PostgREST filter like "ilike.*Fun*" so the server returns rows
-     * whose category column contains the given text (case-insensitive).
-     * Returns null when no category is requested.
-     */
-    public static String categoryFilter(String category) {
-        if (category == null || category.isEmpty()) {
-            return null;
-        }
-        return "ilike.*" + category + "*";
-    }
-
-    /** Builds the PostgREST equality filter "eq.123" used by update/delete URLs. */
-    public static String idFilter(int id) {
-        return "eq." + id;
-    }
-
     public interface UploadCallback {
         void onSuccess(String publicUrl);
         void onError(String message);
     }
 
     /**
-     * Uploads raw image bytes to the "logos" bucket in Supabase Storage and
-     * calls back on the main thread with the public URL of the saved file.
+     * Uploads raw image bytes to upload_logo.php, which forwards them to
+     * Supabase Storage. The PHP script replies with a JSON object that
+     * contains the publicly accessible URL of the saved image.
      */
     public static void uploadImage(byte[] imageBytes, String mimeType, UploadCallback cb) {
-        String filename = "logo_" + System.currentTimeMillis() + extensionFor(mimeType);
-        String uploadUrl = SUPABASE_URL + "/storage/v1/object/" + LOGO_BUCKET + "/" + filename;
-        String publicUrl = SUPABASE_URL + "/storage/v1/object/public/" + LOGO_BUCKET + "/" + filename;
+        String url = BASE_URL + "upload_logo.php";
 
         RequestBody body = RequestBody.create(MediaType.parse(mimeType), imageBytes);
         Request request = new Request.Builder()
-                .url(uploadUrl)
+                .url(url)
                 .post(body)
                 .build();
 
@@ -105,25 +77,31 @@ public class ApiClient {
 
             @Override
             public void onResponse(Call call, Response response) {
+                String responseBody = null;
                 try {
-                    if (response.isSuccessful()) {
-                        main.post(() -> cb.onSuccess(publicUrl));
-                    } else {
-                        String msg = "Upload failed (HTTP " + response.code() + ")";
-                        main.post(() -> cb.onError(msg));
-                    }
+                    responseBody = response.body() != null ? response.body().string() : "";
+                } catch (IOException e) {
+                    main.post(() -> cb.onError(e.getMessage()));
+                    response.close();
+                    return;
                 } finally {
                     response.close();
                 }
+
+                if (!response.isSuccessful()) {
+                    final String msg = "Upload failed (HTTP " + response.code() + ")";
+                    main.post(() -> cb.onError(msg));
+                    return;
+                }
+
+                try {
+                    JSONObject json = new JSONObject(responseBody);
+                    String publicUrl = json.getString("public_url");
+                    main.post(() -> cb.onSuccess(publicUrl));
+                } catch (Exception e) {
+                    main.post(() -> cb.onError("Bad response from server: " + e.getMessage()));
+                }
             }
         });
-    }
-
-    private static String extensionFor(String mimeType) {
-        if (mimeType == null) return ".jpg";
-        if (mimeType.contains("png")) return ".png";
-        if (mimeType.contains("webp")) return ".webp";
-        if (mimeType.contains("gif")) return ".gif";
-        return ".jpg";
     }
 }

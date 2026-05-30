@@ -105,7 +105,7 @@ public class CompanyDetailActivity extends AppCompatActivity {
 
     private void doDelete() {
         ApiClient.getCompanyService()
-                .deleteCompany(ApiClient.idFilter(currentCompany.getId()))
+                .deleteCompany(currentCompany.getId())
                 .enqueue(new Callback<java.util.List<Company>>() {
                     @Override
                     public void onResponse(Call<java.util.List<Company>> call,

@@ -149,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadCompaniesForProximity() {
         ApiClient.getCompanyService()
-                .getCompanies("*", null, "name.asc")
+                .getCompanies(null)
                 .enqueue(new Callback<List<Company>>() {
                     @Override
                     public void onResponse(Call<List<Company>> call, Response<List<Company>> response) {

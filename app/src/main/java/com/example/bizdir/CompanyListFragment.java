@@ -86,7 +86,7 @@ public class CompanyListFragment extends Fragment {
         if (swipeRefresh != null) swipeRefresh.setRefreshing(true);
 
         ApiClient.getCompanyService()
-                .getCompanies("*", ApiClient.categoryFilter(category), "name.asc")
+                .getCompanies(category)
                 .enqueue(new Callback<List<Company>>() {
                     @Override
                     public void onResponse(Call<List<Company>> call, Response<List<Company>> response) {

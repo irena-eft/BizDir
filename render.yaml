@@ -1,0 +1,19 @@
+# Render Blueprint - lets you create the web service with one click.
+# When you connect this repo to Render, Render reads this file and
+# offers to create the service for you automatically. The two secrets
+# (sync: false) must be filled in once in the Render dashboard.
+services:
+  - type: web
+    name: bizdir-server
+    runtime: docker
+    plan: free
+    rootDir: server
+    dockerfilePath: ./Dockerfile
+    region: frankfurt
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: LOGO_BUCKET
+        value: logos

@@ -274,7 +274,7 @@ public class AddCompanyActivity extends AppCompatActivity {
             int existingId = editingCompany.getId();
             company.clearId();
             ApiClient.getCompanyService()
-                    .updateCompany(ApiClient.idFilter(existingId), company)
+                    .updateCompany(existingId, company)
                     .enqueue(saveCallback(/* isUpdate */ true));
         } else {
             ApiClient.getCompanyService()
