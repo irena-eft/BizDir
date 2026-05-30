@@ -8,9 +8,12 @@ import android.view.ViewGroup;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,8 +28,18 @@ public class CompanyListFragment extends Fragment {
 
     private String category;
     private ListView listView;
+    private SwipeRefreshLayout swipeRefresh;
     private CompanyAdapter adapter;
     private List<Company> companyList;
+
+    private final ActivityResultLauncher<Intent> detailLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == android.app.Activity.RESULT_OK
+                        && getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).refreshAllTabs();
+                }
+            });
 
     public static CompanyListFragment newInstance(String category) {
         CompanyListFragment fragment = new CompanyListFragment();
@@ -50,6 +63,8 @@ public class CompanyListFragment extends Fragment {
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_company_list, container, false);
         listView = view.findViewById(R.id.listView);
+        swipeRefresh = view.findViewById(R.id.swipeRefresh);
+
         companyList = new ArrayList<>();
         adapter = new CompanyAdapter(requireContext(), companyList);
         listView.setAdapter(adapter);
@@ -58,19 +73,24 @@ public class CompanyListFragment extends Fragment {
             Company company = (Company) adapter.getItem(position);
             Intent intent = new Intent(requireContext(), CompanyDetailActivity.class);
             intent.putExtra(CompanyDetailActivity.EXTRA_COMPANY, company);
-            startActivity(intent);
+            detailLauncher.launch(intent);
         });
+
+        swipeRefresh.setOnRefreshListener(this::loadCompanies);
 
         loadCompanies();
         return view;
     }
 
     public void loadCompanies() {
+        if (swipeRefresh != null) swipeRefresh.setRefreshing(true);
+
         ApiClient.getCompanyService()
                 .getCompanies("*", ApiClient.categoryFilter(category), "name.asc")
                 .enqueue(new Callback<List<Company>>() {
                     @Override
                     public void onResponse(Call<List<Company>> call, Response<List<Company>> response) {
+                        if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
                         if (response.isSuccessful() && response.body() != null) {
                             adapter.updateList(response.body());
                         } else if (getContext() != null) {
@@ -82,6 +102,7 @@ public class CompanyListFragment extends Fragment {
 
                     @Override
                     public void onFailure(Call<List<Company>> call, Throwable t) {
+                        if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
                         if (getContext() != null) {
                             Toast.makeText(getContext(),
                                     "Error: " + t.getMessage(),

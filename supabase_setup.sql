@@ -34,8 +34,10 @@ WHERE NOT EXISTS (SELECT 1 FROM companies);
 -- -------------------------------------------------------------
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Anyone can read companies" ON companies;
-DROP POLICY IF EXISTS "Anyone can add companies" ON companies;
+DROP POLICY IF EXISTS "Anyone can read companies"   ON companies;
+DROP POLICY IF EXISTS "Anyone can add companies"    ON companies;
+DROP POLICY IF EXISTS "Anyone can update companies" ON companies;
+DROP POLICY IF EXISTS "Anyone can delete companies" ON companies;
 
 CREATE POLICY "Anyone can read companies"
     ON companies FOR SELECT
@@ -44,6 +46,15 @@ CREATE POLICY "Anyone can read companies"
 CREATE POLICY "Anyone can add companies"
     ON companies FOR INSERT
     WITH CHECK (true);
+
+CREATE POLICY "Anyone can update companies"
+    ON companies FOR UPDATE
+    USING (true)
+    WITH CHECK (true);
+
+CREATE POLICY "Anyone can delete companies"
+    ON companies FOR DELETE
+    USING (true);
 
 
 -- 3. Storage bucket for company logos

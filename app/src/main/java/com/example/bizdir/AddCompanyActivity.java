@@ -1,6 +1,7 @@
 package com.example.bizdir;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -36,6 +37,9 @@ import retrofit2.Response;
 
 public class AddCompanyActivity extends AppCompatActivity {
 
+    public static final String EXTRA_EDIT_COMPANY = "edit_company";
+    public static final String EXTRA_UPDATED_COMPANY = "updated_company";
+
     private static final int LOCATION_PERMISSION_REQUEST = 2001;
 
     private EditText editName, editAddress, editLatitude, editLongitude,
@@ -48,7 +52,9 @@ public class AddCompanyActivity extends AppCompatActivity {
     private byte[] selectedImageBytes;
     private String selectedImageMime;
 
-    // Modern Android photo picker - no runtime permission needed.
+    /** Non-null while we're editing an existing company; null when adding a new one. */
+    private Company editingCompany;
+
     private final ActivityResultLauncher<PickVisualMediaRequest> photoPicker =
             registerForActivityResult(
                     new ActivityResultContracts.PickVisualMedia(),
@@ -83,6 +89,13 @@ public class AddCompanyActivity extends AppCompatActivity {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
+        editingCompany = (Company) getIntent().getSerializableExtra(EXTRA_EDIT_COMPANY);
+        if (editingCompany != null) {
+            setTitle("Edit company");
+            btnSave.setText("UPDATE");
+            prefillFromCompany(editingCompany);
+        }
+
         btnSave.setOnClickListener(v -> saveCompany());
 
         btnPickImage.setOnClickListener(v -> photoPicker.launch(
@@ -91,6 +104,29 @@ public class AddCompanyActivity extends AppCompatActivity {
                         .build()));
 
         btnUseMyLocation.setOnClickListener(v -> fetchCurrentLocation());
+    }
+
+    private void prefillFromCompany(Company c) {
+        editName.setText(c.getName());
+        editAddress.setText(c.getAddress());
+        editLatitude.setText(String.valueOf(c.getLatitude()));
+        editLongitude.setText(String.valueOf(c.getLongitude()));
+        editEmail.setText(c.getEmail());
+        editTelephone.setText(c.getTelephone());
+        editWebsite.setText(c.getWebsite());
+
+        String category = c.getCategory();
+        if (category != null) {
+            checkIndustry.setChecked(category.contains("Industry"));
+            checkFun.setChecked(category.contains("Fun"));
+            checkEducation.setChecked(category.contains("Education"));
+            checkServices.setChecked(category.contains("Services"));
+        }
+
+        String iconUrl = c.getIconUrl();
+        if (iconUrl != null && (iconUrl.startsWith("http://") || iconUrl.startsWith("https://"))) {
+            Glide.with(this).load(iconUrl).placeholder(R.drawable.ic_default).into(imagePreview);
+        }
     }
 
     private void loadPickedImage(Uri uri) {
@@ -200,6 +236,12 @@ public class AddCompanyActivity extends AppCompatActivity {
         company.setWebsite(editWebsite.getText().toString().trim());
         company.setCategory(String.join(",", categories));
 
+        // When editing, keep the existing icon_url unless the user picked a new
+        // image (which will overwrite icon_url after upload below).
+        if (editingCompany != null) {
+            company.setIconUrl(editingCompany.getIconUrl());
+        }
+
         if (selectedImageBytes != null) {
             btnSave.setEnabled(false);
             btnSave.setText("Uploading image...");
@@ -213,8 +255,7 @@ public class AddCompanyActivity extends AppCompatActivity {
 
                         @Override
                         public void onError(String message) {
-                            btnSave.setEnabled(true);
-                            btnSave.setText("SAVE");
+                            resetSaveButton();
                             Toast.makeText(AddCompanyActivity.this,
                                     "Image upload failed: " + message,
                                     Toast.LENGTH_LONG).show();
@@ -227,31 +268,56 @@ public class AddCompanyActivity extends AppCompatActivity {
 
     private void sendCompanyToServer(Company company) {
         btnSave.setEnabled(false);
-        btnSave.setText("Saving...");
-        ApiClient.getCompanyService().addCompany(company).enqueue(new Callback<List<Company>>() {
+        btnSave.setText(editingCompany != null ? "Updating..." : "Saving...");
+
+        if (editingCompany != null) {
+            int existingId = editingCompany.getId();
+            company.clearId();
+            ApiClient.getCompanyService()
+                    .updateCompany(ApiClient.idFilter(existingId), company)
+                    .enqueue(saveCallback(/* isUpdate */ true));
+        } else {
+            ApiClient.getCompanyService()
+                    .addCompany(company)
+                    .enqueue(saveCallback(/* isUpdate */ false));
+        }
+    }
+
+    private Callback<List<Company>> saveCallback(boolean isUpdate) {
+        return new Callback<List<Company>>() {
             @Override
             public void onResponse(Call<List<Company>> call, Response<List<Company>> response) {
                 if (response.isSuccessful()) {
                     Toast.makeText(AddCompanyActivity.this,
-                            "Company saved successfully!", Toast.LENGTH_SHORT).show();
+                            isUpdate ? "Company updated!" : "Company saved!",
+                            Toast.LENGTH_SHORT).show();
+
+                    Intent data = new Intent();
+                    if (isUpdate && response.body() != null && !response.body().isEmpty()) {
+                        data.putExtra(EXTRA_UPDATED_COMPANY, response.body().get(0));
+                    }
+                    setResult(RESULT_OK, data);
                     finish();
                 } else {
-                    btnSave.setEnabled(true);
-                    btnSave.setText("SAVE");
+                    resetSaveButton();
                     Toast.makeText(AddCompanyActivity.this,
-                            "Failed to save company (HTTP " + response.code() + ")",
+                            "Failed to save (HTTP " + response.code() + ")",
                             Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<List<Company>> call, Throwable t) {
-                btnSave.setEnabled(true);
-                btnSave.setText("SAVE");
+                resetSaveButton();
                 Toast.makeText(AddCompanyActivity.this,
                         "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
-        });
+        };
+    }
+
+    private void resetSaveButton() {
+        btnSave.setEnabled(true);
+        btnSave.setText(editingCompany != null ? "UPDATE" : "SAVE");
     }
 
     private Double parseDoubleOrNull(String value) {

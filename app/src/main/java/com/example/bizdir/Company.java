@@ -22,6 +22,7 @@ public class Company implements Serializable {
 
     public int getId() { return id == null ? 0 : id; }
     public void setId(int id) { this.id = id; }
+    public void clearId() { this.id = null; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

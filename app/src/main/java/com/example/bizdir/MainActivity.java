@@ -13,6 +13,8 @@ import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -50,6 +52,14 @@ public class MainActivity extends AppCompatActivity {
 
     private final List<Company> companiesForProximity = new ArrayList<>();
     private final Set<Integer> notifiedCompanyIds = new HashSet<>();
+
+    private final ActivityResultLauncher<Intent> addCompanyLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    refreshAllTabs();
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -120,10 +130,21 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.action_settings) {
-            startActivity(new Intent(this, AddCompanyActivity.class));
+            addCompanyLauncher.launch(new Intent(this, AddCompanyActivity.class));
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    /** Re-fetches the list for every visible tab and the proximity cache. */
+    public void refreshAllTabs() {
+        for (int i = 0; i < pagerAdapter.getItemCount(); i++) {
+            CompanyListFragment fragment = pagerAdapter.getFragment(i);
+            if (fragment != null) {
+                fragment.loadCompanies();
+            }
+        }
+        loadCompaniesForProximity();
     }
 
     private void loadCompaniesForProximity() {

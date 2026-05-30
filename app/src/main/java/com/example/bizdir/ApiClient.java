@@ -71,6 +71,11 @@ public class ApiClient {
         return "ilike.*" + category + "*";
     }
 
+    /** Builds the PostgREST equality filter "eq.123" used by update/delete URLs. */
+    public static String idFilter(int id) {
+        return "eq." + id;
+    }
+
     public interface UploadCallback {
         void onSuccess(String publicUrl);
         void onError(String message);
