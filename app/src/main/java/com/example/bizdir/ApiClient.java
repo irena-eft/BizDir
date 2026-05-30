@@ -22,7 +22,7 @@ public class ApiClient {
     //   http://10.0.2.2/business_directory/        for the Android emulator
     //   http://192.168.x.x/business_directory/     for a real phone on Wi-Fi
     // The trailing slash is required.
-    private static final String BASE_URL = "http://10.0.2.2/business_directory/";
+    private static final String BASE_URL = "https://bizdir.onrender.com/";
 
     private static Retrofit retrofit = null;
     private static OkHttpClient httpClient = null;
