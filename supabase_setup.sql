@@ -1,7 +1,5 @@
 -- =============================================================
 -- BizDir Supabase setup
--- Paste this entire file into the Supabase SQL Editor and click Run.
--- Safe to re-run: each block protects itself against "already exists".
 -- =============================================================
 
 
@@ -20,7 +18,7 @@ CREATE TABLE IF NOT EXISTS companies (
     icon_url    VARCHAR(255) DEFAULT 'default_icon'
 );
 
--- Sample data (only inserted on first setup)
+-- Sample data
 INSERT INTO companies (name, address, latitude, longitude, email, telephone, website, category)
 SELECT * FROM (VALUES
     ('Octopus Corp', '123 Ocean St', 41.9981, 21.4254, 'octopus@example.com', '070123456', 'www.octopus.com', 'Fun'),
