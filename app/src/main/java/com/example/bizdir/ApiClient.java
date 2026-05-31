@@ -6,6 +6,7 @@ import android.os.Looper;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.MediaType;
@@ -18,10 +19,6 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
 
-    // Where your PHP web services live. Change this to:
-    //   http://10.0.2.2/business_directory/        for the Android emulator
-    //   http://192.168.x.x/business_directory/     for a real phone on Wi-Fi
-    // The trailing slash is required.
     private static final String BASE_URL = "https://bizdir.onrender.com/";
 
     private static Retrofit retrofit = null;
@@ -29,7 +26,12 @@ public class ApiClient {
 
     private static OkHttpClient getHttpClient() {
         if (httpClient == null) {
-            httpClient = new OkHttpClient.Builder().build();
+            httpClient = new OkHttpClient.Builder()
+                    .connectTimeout(60, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .writeTimeout(60, TimeUnit.SECONDS)
+                    .retryOnConnectionFailure(true)
+                    .build();
         }
         return httpClient;
     }
